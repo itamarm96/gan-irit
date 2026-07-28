@@ -57,12 +57,17 @@
     </div>
 
     <div class="workspace">
+      <div class="sb-backdrop" id="sbBackdrop" hidden></div>
       <aside class="sidebar" id="sidebar">
         <div class="side-head">
           <span>סינון</span>
-          <button id="clearFilters" class="link-btn">ניקוי הכל</button>
+          <div class="side-head-actions">
+            <button id="clearFilters" class="link-btn">ניקוי הכל</button>
+            <button id="closeFilters" class="sb-close" aria-label="סגירת הסינון">✕</button>
+          </div>
         </div>
         <div id="filterGroups"></div>
+        <div class="sb-foot"><button id="applyFilters" class="btn-primary">הצגת התוצאות</button></div>
       </aside>
 
       <section class="results" aria-live="polite">
@@ -240,8 +245,18 @@ select,input{font-family:inherit;font-size:15px;color:var(--ink)}
 .sidebar{position:sticky;top:130px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
   padding:6px 0;box-shadow:var(--shadow);max-height:calc(100vh - 150px);overflow:auto}
 .side-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 10px;
-  font-weight:700;font-size:14px;border-bottom:1px solid var(--line)}
+  font-weight:700;font-size:14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+.side-head-actions{display:flex;align-items:center;gap:10px}
 .link-btn{background:none;border:none;color:var(--accent);font-size:13px;font-weight:600}
+.sb-close{display:none;background:var(--panel-2);border:1px solid var(--line-strong);color:var(--ink);
+  width:30px;height:30px;border-radius:8px;font-size:15px;line-height:1;padding:0}
+.sb-foot{display:none;position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px}
+.sb-foot .btn-primary{width:100%}
+.sb-backdrop{position:fixed;inset:0;background:rgba(20,26,22,.45);z-index:45;border:none}
+/* skill groups (two-level, prevents look-alike duplicates) */
+.skill-parent{margin:6px 0 2px;padding:5px 8px 3px;font-size:12px;font-weight:700;color:var(--accent);
+  border-top:1px solid var(--line)}
+.skill-parent:first-child{border-top:none;margin-top:0}
 .fgroup{border-bottom:1px solid var(--line)}
 .fgroup:last-child{border-bottom:none}
 .fgroup > summary{list-style:none;cursor:pointer;padding:11px 16px;font-weight:600;font-size:14px;
@@ -343,9 +358,14 @@ select,input{font-family:inherit;font-size:15px;color:var(--ink)}
 /* responsive */
 @media (max-width:860px){
   .workspace{grid-template-columns:1fr}
-  .sidebar{position:fixed;inset:0 auto 0 0;top:0;z-index:50;width:min(84vw,320px);max-height:100vh;border-radius:0;
-    transform:translateX(100%);transition:.25s;display:none}
-  .sidebar.open{display:block;transform:translateX(0)}
+  .sidebar{position:fixed;top:0;bottom:0;right:0;left:auto;z-index:50;width:min(86vw,340px);
+    max-height:100vh;height:100vh;border-radius:0;border:none;overflow:auto;
+    display:flex;flex-direction:column;padding:0;
+    transform:translateX(101%);transition:transform .25s ease;visibility:hidden}
+  .sidebar.open{transform:translateX(0);visibility:visible}
+  #filterGroups{flex:1}
+  .sb-close{display:block}
+  .sb-foot{display:block}
   .filters-toggle{display:inline-flex}
   .plan-grid{grid-template-columns:1fr}
   body.sb-open{overflow:hidden}
@@ -444,12 +464,40 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     wrap.appendChild(skillGroup());
   }
   function skillGroup(){
-    // skills present, optionally filtered by selected domains
+    // skills present, optionally narrowed by selected domains.
+    // Grouped two-level by the "<parent>: <sub>" convention so near-identical
+    // prefixes don't read as duplicates in a flat list.
     var selDoms=Object.keys(state.domains);
     var m={};ACT.forEach(function(a){if(selDoms.length && !state.domains[a.domain])return;
       if(a.skill){m[a.skill]=(m[a.skill]||0)+1;}});
-    var opts=Object.keys(m).sort(function(x,y){return m[y]-m[x];}).slice(0,40).map(function(s){
-      return opt('skill',s,s,m[s]);});
+    var parents={},order=[];
+    Object.keys(m).forEach(function(s){
+      var i=s.indexOf(':');
+      var p=i>-1?s.slice(0,i).trim():'כללי';
+      var sub=i>-1?s.slice(i+1).trim():s;
+      if(!parents[p]){parents[p]={items:[],total:0};order.push(p);}
+      parents[p].items.push({full:s,label:sub,n:m[s]});
+      parents[p].total+=m[s];
+    });
+    order.sort(function(a,b){return parents[b].total-parents[a].total;});
+    // headers only where a parent actually has several sub-skills; lone skills
+    // render with their full name so nothing looks orphaned.
+    var opts=[],singles=[];
+    order.forEach(function(p){
+      var grp=parents[p];
+      grp.items.sort(function(a,b){return b.n-a.n;});
+      if(p!=='כללי' && grp.items.length>1){
+        opts.push(el('div','skill-parent',esc(p)));
+        grp.items.forEach(function(it){opts.push(opt('skill',it.full,it.label,it.n));});
+      } else {
+        grp.items.forEach(function(it){singles.push(it);});
+      }
+    });
+    singles.sort(function(a,b){return b.n-a.n;});
+    if(singles.length){
+      if(opts.length)opts.push(el('div','skill-parent','מיומנויות נוספות'));
+      singles.forEach(function(it){opts.push(opt('skill',it.full,it.full,it.n));});
+    }
     var g=fgroup('מיומנות',opts,false);g.id='skillGroup';return g;
   }
   function fgroup(title,opts,open){
@@ -576,10 +624,21 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
   function resetFilters(){state.domains={};state.holiday={};state.season={};state.skill={};state.year={};state.q='';state.limit=24;
     $('#q').value='';$('#qClear').hidden=true;var sg=$('#skillGroup');if(sg){var ns=skillGroup();sg.replaceWith(ns);}render();syncOptSel();}
   $('#printBtn').addEventListener('click',function(){window.print();});
-  // mobile sidebar
-  $('#filtersToggle').addEventListener('click',function(){var sb=$('#sidebar');var open=sb.classList.toggle('open');
-    document.body.classList.toggle('sb-open',open);this.setAttribute('aria-expanded',open);});
-  $('#sidebar').addEventListener('click',function(e){if(e.target.tagName==='INPUT'&&window.innerWidth<=860){/*keep open*/}});
+  // mobile sidebar: open/close with backdrop, close button, Escape and apply
+  function setSidebar(open){
+    var sb=$('#sidebar');
+    sb.classList.toggle('open',open);
+    $('#sbBackdrop').hidden=!open;
+    document.body.classList.toggle('sb-open',open);
+    $('#filtersToggle').setAttribute('aria-expanded',open?'true':'false');
+  }
+  $('#filtersToggle').addEventListener('click',function(){setSidebar(!$('#sidebar').classList.contains('open'));});
+  $('#closeFilters').addEventListener('click',function(){setSidebar(false);});
+  $('#applyFilters').addEventListener('click',function(){setSidebar(false);});
+  $('#sbBackdrop').addEventListener('click',function(){setSidebar(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('#sidebar').classList.contains('open'))setSidebar(false);});
+  // keep desktop state sane when resizing back up
+  window.addEventListener('resize',function(){if(window.innerWidth>860)setSidebar(false);});
 
   // ---------- tabs ----------
   $$('.tab').forEach(function(t){t.addEventListener('click',function(){
