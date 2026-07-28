@@ -292,10 +292,11 @@
       <label class="fld">
         <span class="fld-lbl">מודל</span>
         <select id="setModel">
-          <option value="gemini-2.5-flash">Gemini 2.5 Flash — מהיר וזול (מומלץ)</option>
-          <option value="gemini-2.5-pro">Gemini 2.5 Pro — איכותי יותר</option>
-          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          <option value="__auto_flash__">אוטומטי — המהיר ביותר שזמין (Flash)</option>
+          <option value="__auto_pro__">אוטומטי — ה־Pro העדכני ביותר שזמין</option>
         </select>
+        <span class="fld-help" id="modelHelp">בבחירה אוטומטית האפליקציה בודקת מול המפתח שלך אילו מודלים זמינים
+          ובוחרת את העדכני ביותר — כך שגם כשגוגל מחליפה דורות, זה פשוט ימשיך לעבוד.</span>
       </label>
       <div class="set-status" id="setStatus"></div>
     </div>
@@ -1291,21 +1292,95 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
   // ================= SETTINGS (bring-your-own Gemini key, stored on device) =================
   var LS_KEY='ganirit_gemkey_v1', LS_MODEL='ganirit_gemmodel_v1';
   function getKey(){return load(LS_KEY)||'';}
-  function getModel(){return load(LS_MODEL)||'gemini-2.5-flash';}
+  function getModel(){return load(LS_MODEL)||'__auto_flash__';}
+
+  // --- model discovery: ask the key which models it can actually use ---
+  var modelCache=null, resolvedCache={};
+  async function listModels(key){
+    key=key||getKey();
+    if(!key)throw new Error('חסר מפתח.');
+    if(modelCache&&modelCache.key===key)return modelCache.list;
+    var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+encodeURIComponent(key)+'&pageSize=200');
+    var d=await r.json();
+    if(!r.ok)throw new Error((d&&d.error&&d.error.message)||('שגיאה '+r.status));
+    var list=(d.models||[])
+      .filter(function(m){return (m.supportedGenerationMethods||[]).indexOf('generateContent')>-1;})
+      .map(function(m){return String(m.name||'').replace(/^models\//,'');})
+      .filter(function(n){return /^gemini/.test(n) && !/embedding|aqa|vision|image|tts|audio|live|native/.test(n);});
+    modelCache={key:key,list:list};
+    return list;
+  }
+  // rank: newest generation first, stable before preview/exp, plain before dated builds
+  function rankModel(n){
+    var gen=0,m=n.match(/gemini-(\d+(?:\.\d+)?)/);
+    if(m)gen=parseFloat(m[1]);
+    var stable=/-(exp|preview|thinking)/.test(n)?0:1;
+    var dated=/-\d{3,}$/.test(n)?0:1;   // prefer "gemini-x-pro" over "gemini-x-pro-002"
+    var lite=/lite/.test(n)?0:1;
+    return gen*1000 + stable*100 + dated*10 + lite;
+  }
+  function bestOf(list,kind){
+    var want=list.filter(function(n){return n.indexOf(kind)>-1;});
+    if(!want.length)return null;
+    return want.sort(function(a,b){return rankModel(b)-rankModel(a);})[0];
+  }
+  async function resolveModel(key,sel){
+    sel=sel||getModel();key=key||getKey();
+    if(sel.indexOf('__auto')!==0)return sel;
+    var kind=(sel==='__auto_pro__')?'pro':'flash';
+    if(resolvedCache[key+kind])return resolvedCache[key+kind];
+    var list=await listModels(key);
+    var pick=bestOf(list,kind) || bestOf(list,kind==='pro'?'flash':'pro') || list[0];
+    if(!pick)throw new Error('לא נמצאו מודלים זמינים למפתח הזה.');
+    resolvedCache[key+kind]=pick;
+    return pick;
+  }
+  // fill the dropdown with what this key really offers
+  async function populateModels(key){
+    var sel=$('#setModel'), cur=sel.value;
+    var help=$('#modelHelp');
+    try{
+      var list=await listModels(key);
+      var pro=bestOf(list,'pro'), flash=bestOf(list,'flash');
+      sel.innerHTML='';
+      var o1=el('option');o1.value='__auto_flash__';
+      o1.textContent='אוטומטי — המהיר ביותר'+(flash?(' (כרגע: '+flash+')'):'');
+      var o2=el('option');o2.value='__auto_pro__';
+      o2.textContent='אוטומטי — ה־Pro העדכני'+(pro?(' (כרגע: '+pro+')'):' — לא זמין למפתח זה');
+      sel.appendChild(o1);sel.appendChild(o2);
+      var grp=document.createElement('optgroup');grp.label='בחירה ידנית';
+      list.sort(function(a,b){return rankModel(b)-rankModel(a);}).forEach(function(n){
+        var o=el('option');o.value=n;o.textContent=n;grp.appendChild(o);});
+      sel.appendChild(grp);
+      sel.value=cur;
+      if(sel.selectedIndex<0)sel.value='__auto_flash__';
+      help.textContent='נמצאו '+list.length+' מודלים זמינים למפתח שלך. בבחירה אוטומטית האפליקציה תמיד תיקח את העדכני ביותר.';
+    }catch(e){
+      help.textContent='לא הצלחתי לקרוא את רשימת המודלים ('+e.message+'). הבחירה האוטומטית עדיין תעבוד.';
+    }
+  }
   function openSettings(){
     $('#setKey').value=getKey();
     $('#setModel').value=getModel();
+    if($('#setModel').selectedIndex<0)$('#setModel').value='__auto_flash__';
     $('#setStatus').textContent='';$('#setStatus').className='set-status';
     $('#setModal').hidden=false;$('#setBackdrop').hidden=false;
+    if(getKey())populateModels(getKey());
   }
   function closeSettings(){$('#setModal').hidden=true;$('#setBackdrop').hidden=true;}
   $('#settingsBtn').addEventListener('click',openSettings);
   $('#setClose').addEventListener('click',closeSettings);
   $('#setBackdrop').addEventListener('click',closeSettings);
   $('#setSave').addEventListener('click',function(){
-    save(LS_KEY,$('#setKey').value.trim());save(LS_MODEL,$('#setModel').value);
+    var newKey=$('#setKey').value.trim();
+    if(newKey!==getKey()){modelCache=null;resolvedCache={};}
+    save(LS_KEY,newKey);save(LS_MODEL,$('#setModel').value);
     var s=$('#setStatus');s.className='set-status ok';s.textContent='נשמר ✓';
     setTimeout(closeSettings,700);
+  });
+  $('#setKey').addEventListener('change',function(){
+    var k=$('#setKey').value.trim();
+    if(k){modelCache=null;resolvedCache={};populateModels(k);}
   });
   $('#setClear').addEventListener('click',function(){
     save(LS_KEY,'');$('#setKey').value='';
@@ -1316,15 +1391,18 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     var k=$('#setKey').value.trim();
     if(!k){s.className='set-status bad';s.textContent='חסר מפתח.';return;}
     try{
-      var t=await callGemini('בדיקה קצרה: כתוב "מחובר" ותו לא.',[],[],k,$('#setModel').value);
-      s.className='set-status ok';s.textContent='החיבור תקין ✓  ('+t.slice(0,40)+')';
+      var used=await resolveModel(k,$('#setModel').value);
+      await callGemini('בדיקה קצרה: כתוב "מחובר" ותו לא.',[],[],k,$('#setModel').value);
+      s.className='set-status ok';s.textContent='החיבור תקין ✓  (מודל בשימוש: '+used+')';
+      populateModels(k);
     }catch(e){s.className='set-status bad';s.textContent='שגיאה: '+e.message;}
   });
 
   // direct call to Gemini with the key held on this device
   async function callGemini(question,ctx,history,key,model){
-    key=key||getKey();model=model||getModel();
+    key=key||getKey();
     if(!key)throw new Error('חסר מפתח API. פתחי הגדרות ⚙ והזיני מפתח.');
+    model=await resolveModel(key,model||getModel());
     var sys='את/ה עוזר/ת תכנון פדגוגי לגננת בגן דתי בישראל ("גן עירית"). '+
       'ברשותך קטעים מתוך בנק הפעילויות האישי של הגננת — פעילויות שהיא עצמה כתבה בדפי הקשר שלה. '+
       'כללים: (1) בסס/י את התשובה קודם כל על הפעילויות שנשלחו בהקשר, וציין/י בסוגריים את המקור. '+
