@@ -1,8 +1,8 @@
-// Network-first for the app document so a refresh (while online) always shows
+﻿// Network-first for the app document so a refresh (while online) always shows
 // the latest deployed version; falls back to cache when offline. Static assets
 // use stale-while-revalidate. Installing to the home screen is one-time —
 // content updates never require reinstalling.
-const CACHE = 'ganirit-v4';
+const CACHE = 'ganirit-v5';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

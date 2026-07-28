@@ -25,6 +25,9 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <button class="icon-btn" id="settingsBtn" title="הגדרות ומפתח AI" aria-label="הגדרות">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 6a2 2 0 1 1 0-4a2 2 0 0 1 0 4m8.4-2a8.5 8.5 0 0 0-.1-1.3l1.7-1.3l-2-3.5l-2 .8a8 8 0 0 0-2.2-1.3L15.5 3h-4l-.3 2.2a8 8 0 0 0-2.2 1.3l-2-.8l-2 3.5l1.7 1.3a8.5 8.5 0 0 0 0 2.6L5 14.4l2 3.5l2-.8a8 8 0 0 0 2.2 1.3l.3 2.2h4l.3-2.2a8 8 0 0 0 2.2-1.3l2 .8l2-3.5l-1.7-1.3c.06-.43.1-.86.1-1.3"/></svg>
+      </button>
       <button class="icon-btn" id="printBtn" title="הדפסה של התוצאות">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M7 3h10v4H7zM5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2m4 8v3h6v-3zm9-3.5a1 1 0 1 0 0-2a1 1 0 0 0 0 2"/></svg>
         <span>הדפסה</span>
@@ -49,6 +52,9 @@
       <div class="hero-search">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M10 4a6 6 0 1 0 3.5 10.9l4.8 4.8l1.4-1.4l-4.8-4.8A6 6 0 0 0 10 4m0 2a4 4 0 1 1 0 8a4 4 0 0 1 0-8"/></svg>
         <input id="homeQ" type="search" placeholder="פעילות בנושא… / מיומנות… / חג…" autocomplete="off">
+        <button id="homeMic" class="mic-btn" title="חיפוש בהקלטה" aria-label="חיפוש בהקלטה">
+          <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>
+        </button>
         <button id="homeGo" class="btn-primary">חיפוש</button>
       </div>
       <div class="hero-actions">
@@ -96,9 +102,16 @@
     </div>
 
     <div class="wizard">
+      <div class="wz-mode">
+        <button class="pill on" id="modeDay">סדר יום ליום אחד</button>
+        <button class="pill" id="modeTopic">תכנון נושא לכמה ימים</button>
+      </div>
       <div class="wz-grid">
-        <label>יום בשבוע
+        <label id="lblDay">יום בשבוע
           <select id="wzDay"></select>
+        </label>
+        <label id="lblDays" hidden>כמה ימים ללמד את הנושא
+          <select id="wzDays"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option></select>
         </label>
         <label>נושא / חג
           <select id="wzTopic"></select>
@@ -212,6 +225,9 @@
     <div id="chatLog" class="chat-log"></div>
     <div class="chat-box">
       <textarea id="chatInput" rows="2" placeholder="כתבי כאן…"></textarea>
+      <button id="chatMic" class="mic-btn" title="דיבור במקום כתיבה" aria-label="דיבור במקום כתיבה">
+        <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3m5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1A7 7 0 0 0 19 11z"/></svg>
+      </button>
       <button class="btn-primary" id="chatSend">שליחה</button>
     </div>
     <div class="chat-hint" id="chatHint"></div>
@@ -258,6 +274,37 @@
       </div>
     </div>
   </main>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="modal-backdrop" id="setBackdrop" hidden></div>
+  <div class="modal" id="setModal" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="modal-head">
+      <h3 id="setTitle">הגדרות</h3>
+      <button class="sb-close" id="setClose" aria-label="סגירה" style="display:block">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="fld">
+        <span class="fld-lbl">מפתח Gemini API</span>
+        <input type="password" id="setKey" placeholder="מדביקים כאן את המפתח" autocomplete="off" spellcheck="false">
+        <span class="fld-help">המפתח נשמר <b>רק במכשיר הזה</b> ואינו נשלח לשום מקום מלבד Google.
+          אין לך מפתח? אפשר ליצור בחינם ב־<span class="mono">aistudio.google.com</span> ← Get API key.</span>
+      </label>
+      <label class="fld">
+        <span class="fld-lbl">מודל</span>
+        <select id="setModel">
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash — מהיר וזול (מומלץ)</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro — איכותי יותר</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+        </select>
+      </label>
+      <div class="set-status" id="setStatus"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-primary" id="setSave">שמירה</button>
+      <button class="btn-soft" id="setTest">בדיקת חיבור</button>
+      <button class="btn-soft" id="setClear">מחיקת המפתח</button>
+    </div>
+  </div>
 
   <div class="toast" id="toast" hidden></div>
 </div>
@@ -471,6 +518,14 @@ select,input{font-family:inherit;font-size:15px;color:var(--ink)}
 .back-link{background:none;border:none;color:var(--primary-ink);font-weight:600;font-size:14.5px;padding:0 0 10px}
 .wizard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;
   box-shadow:var(--shadow);margin-bottom:20px}
+.wz-mode{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.day-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;
+  box-shadow:var(--shadow);margin-top:4px}
+.day-block > h4{font-family:var(--serif);font-size:17px;color:var(--primary-ink);margin-bottom:4px}
+.day-block .db-sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:10px}
+.db-part{margin-top:11px}
+.db-part > .dbp-lbl{font-size:12.5px;font-weight:700;color:var(--accent);margin-bottom:5px;
+  display:flex;align-items:center;gap:6px}
 .wz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:14px}
 .wz-grid label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;color:var(--ink-soft)}
 .wz-grid select{background:var(--panel-2);border:1px solid var(--line-strong);border-radius:10px;padding:10px 11px;
@@ -498,6 +553,32 @@ select,input{font-family:inherit;font-size:15px;color:var(--ink)}
 .slot-pick .sp-more{background:none;border:none;color:var(--primary-ink);font-weight:600;font-size:12.5px;padding:2px 0 0}
 .slot-empty{font-size:12.5px;color:var(--ink-soft);font-style:italic}
 .pill.lvl{font-size:12.5px}
+/* ---------- modal / settings ---------- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(20,26,22,.5);z-index:60;border:none}
+.modal{position:fixed;z-index:61;top:50%;left:50%;transform:translate(-50%,-50%);width:min(94vw,520px);
+  max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--line-strong);
+  border-radius:16px;box-shadow:0 18px 50px rgba(20,26,22,.3)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 12px;
+  border-bottom:1px solid var(--line)}
+.modal-head h3{font-size:19px;color:var(--primary-ink)}
+.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+.modal-foot{display:flex;flex-wrap:wrap;gap:8px;padding:0 18px 18px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld-lbl{font-size:13.5px;font-weight:700;color:var(--ink)}
+.fld input,.fld select{background:var(--panel-2);border:1px solid var(--line-strong);border-radius:10px;
+  padding:11px 12px;font-size:15px;color:var(--ink);width:100%}
+.fld-help{font-size:12.3px;color:var(--ink-soft);line-height:1.55}
+.mono{font-family:ui-monospace,monospace;font-size:12px;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 5px}
+.set-status{font-size:13.5px;font-weight:600;min-height:20px}
+.set-status.ok{color:var(--primary-ink)} .set-status.bad{color:var(--rose)}
+/* mic */
+.mic-btn{flex:0 0 auto;background:var(--panel-2);border:1px solid var(--line-strong);color:var(--ink-soft);
+  width:40px;height:40px;border-radius:10px;display:grid;place-items:center;transition:.15s}
+.mic-btn:hover{color:var(--ink);border-color:var(--primary)}
+.mic-btn.rec{background:var(--rose);border-color:var(--rose);color:#fff;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.mic-btn.rec{animation:none}}
 /* ---------- chat ---------- */
 .chat-log{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;min-height:60px}
 .msg{max-width:min(680px,92%);padding:12px 15px;border-radius:14px;font-size:14.6px;line-height:1.65;
@@ -1007,12 +1088,26 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     }
     return s;
   }
+  // The weekly "letter meeting" entries are near-identical across the years, so they
+  // are held back from generated plans unless the request is actually about letters.
+  function isLetterRoutine(a){
+    return /מפגש אותיות|מלך האותיות|מלכת האותיות/.test(a.title+' '+a.text);
+  }
+  function wantsLetters(opts,skillHint){
+    if(skillHint&&skillHint.indexOf('אלפביתי')>-1)return true;
+    return (opts.skills||[]).some(function(s){return s.indexOf('אלפביתי')>-1||s.indexOf('אותיות')>-1;});
+  }
   function pickFor(domains,opts,used,skillHint){
+    var allowLetters=wantsLetters(opts,skillHint);
     var pool=ACT.filter(function(a){
       if(used[actKey(a)])return false;
+      if(!allowLetters&&isLetterRoutine(a))return false;
       if(domains&&domains.length&&domains.indexOf('*groups*')===-1&&domains.indexOf(a.domain)===-1)return false;
       return true;
     });
+    if(!pool.length){ // never dead-end: fall back to anything unused
+      pool=ACT.filter(function(a){return !used[actKey(a)];});
+    }
     if(!pool.length)return null;
     var scored=pool.map(function(a){
       var sc=scoreFor(a,opts);
@@ -1102,15 +1197,200 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
       var b=el('div','slot-body');b.appendChild(pickCard(a));row.appendChild(b);out.appendChild(row);
     }
   }
-  $('#wzBuild').addEventListener('click',function(){$('#planTitle').textContent='בניית סדר יום';buildDayPlan();});
+  // ---- topic plan across several teaching days ----
+  var planMode='day';
+  function setMode(m){
+    planMode=m;
+    $('#modeDay').classList.toggle('on',m==='day');
+    $('#modeTopic').classList.toggle('on',m==='topic');
+    $('#lblDay').hidden=(m!=='day');
+    $('#lblDays').hidden=(m!=='topic');
+    $('#wzBuild').textContent=(m==='day')?'בנה לי סדר יום':'בנה לי תכנון נושא';
+    $('#planIntro').textContent=(m==='day')
+      ? 'אפשר לענות על השאלות כדי למקד, ואפשר פשוט ללחוץ "בנה לי" ולקבל הצעה מיד.'
+      : 'בוחרים נושא וכמה ימים ללמד אותו — ומקבלים לכל יום: מפגש נושא, יצירה מובנית וחופשית, פעילות מעבר תנועתית, וקבוצות מיומנות שקשורות לנושא.';
+    $('#planResult').innerHTML='';
+  }
+  $('#modeDay').addEventListener('click',function(){setMode('day');});
+  $('#modeTopic').addEventListener('click',function(){setMode('topic');});
+
+  function part(label,node){
+    var w=el('div','db-part');
+    w.appendChild(el('div','dbp-lbl',esc(label)));
+    w.appendChild(node);return w;
+  }
+  function buildTopicPlan(){
+    var topic=$('#wzTopic').value;
+    var nDays=parseInt($('#wzDays').value,10)||3;
+    var nGroups=parseInt($('#wzGroups').value,10)||2;
+    var opts={topic:topic,period:$('#wzPeriod').value,skills:wizSelectedSkills()};
+    var used={},out=$('#planResult');out.innerHTML='';
+    var head=el('div','pr-head');
+    head.innerHTML='<h3>תכנון נושא'+(topic?(' · '+esc(topic)):'')+' · '+nDays+' ימים</h3>'+
+      '<div class="pr-meta">לכל יום: מפגש נושא · יצירה מובנית + חופשית · פעילות מעבר תנועתית · '+nGroups+' קבוצות מיומנות'+
+      (opts.period?(' · '+esc(opts.period)):'')+'</div>';
+    out.appendChild(head);
+
+    // skills to rotate through the groups — those the teacher chose, else the
+    // ones that actually appear in this topic's activities
+    var skillPool=opts.skills.slice();
+    if(!skillPool.length){
+      var sc={};
+      ACT.forEach(function(a){
+        if(!a.skill)return;
+        var rel=(topic&&(a.holiday===topic||(a.topics||[]).indexOf(topic)>-1||(a.main_theme||'').indexOf(topic)>-1));
+        if(topic&&!rel)return;
+        if(isLetterRoutine(a))return;
+        sc[a.skill]=(sc[a.skill]||0)+1;
+      });
+      skillPool=Object.keys(sc).sort(function(a,b){return sc[b]-sc[a];}).slice(0,8);
+    }
+
+    for(var d=1;d<=nDays;d++){
+      var blk=el('div','day-block');
+      blk.appendChild(el('h4','יום '+d));
+      blk.appendChild(el('div','db-sub',topic?('נושא: '+esc(topic)):'תכנון כללי'));
+      // 1) topic meeting
+      blk.appendChild(part('מפגש נושא',
+        pickCard(pickFor(['תוכן נלמד','גננת משלימה','פרשת שבוע'],opts,used))));
+      // 2) structured + free art
+      blk.appendChild(part('יצירה מובנית',
+        pickCard(pickFor(['תוכן נלמד'],opts,used,'יצירה ויצרנות'))));
+      var freeArt=el('div','slot-pick');
+      freeArt.innerHTML='<span class="sp-title">יצירה חופשית</span><div class="sp-text">'+
+        'שולחן פתוח בסדנת החומרים — חומרים מגוונים בנושא '+esc(topic||'הנלמד')+
+        ', הילדים מתכננים ובוחרים בעצמם במה להשתמש וכיצד לחבר.</div>';
+      blk.appendChild(part('יצירה חופשית',freeArt));
+      // 3) movement transition
+      blk.appendChild(part('פעילות מעבר תנועתית',
+        pickCard(pickFor(['מוטוריקה-גרפומוטוריה'],opts,used,'מוטוריקה גסה'))));
+      // 4) skill groups tied to the topic
+      var gWrap=el('div');
+      for(var g=0;g<nGroups;g++){
+        var sk=skillPool.length?skillPool[(d-1+g)%skillPool.length]:null;
+        var short=sk?(sk.indexOf(':')>-1?sk.slice(sk.indexOf(':')+1).trim():sk):'קבוצה';
+        gWrap.appendChild(el('div','slot-detail','▪ '+esc(short)));
+        gWrap.appendChild(pickCard(pickFor(null,{topic:opts.topic,period:opts.period,skills:sk?[sk]:[]},used,sk)));
+      }
+      blk.appendChild(part('קבוצות לפי מיומנות',gWrap));
+      out.appendChild(blk);
+    }
+    out.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
+  $('#wzBuild').addEventListener('click',function(){
+    if(planMode==='topic'){$('#planTitle').textContent='תכנון נושא';buildTopicPlan();}
+    else{$('#planTitle').textContent='בניית סדר יום';buildDayPlan();}
+  });
   $('#wzReset').addEventListener('click',function(){
     $('#wzTopic').value='';$('#wzPeriod').value='';$('#wzGroups').value='2';
     $$('#wzSkills .pill').forEach(function(b){b.classList.remove('on');});
     $('#planResult').innerHTML='';});
   $('#wzPrint').addEventListener('click',function(){window.print();});
 
+  // ================= SETTINGS (bring-your-own Gemini key, stored on device) =================
+  var LS_KEY='ganirit_gemkey_v1', LS_MODEL='ganirit_gemmodel_v1';
+  function getKey(){return load(LS_KEY)||'';}
+  function getModel(){return load(LS_MODEL)||'gemini-2.5-flash';}
+  function openSettings(){
+    $('#setKey').value=getKey();
+    $('#setModel').value=getModel();
+    $('#setStatus').textContent='';$('#setStatus').className='set-status';
+    $('#setModal').hidden=false;$('#setBackdrop').hidden=false;
+  }
+  function closeSettings(){$('#setModal').hidden=true;$('#setBackdrop').hidden=true;}
+  $('#settingsBtn').addEventListener('click',openSettings);
+  $('#setClose').addEventListener('click',closeSettings);
+  $('#setBackdrop').addEventListener('click',closeSettings);
+  $('#setSave').addEventListener('click',function(){
+    save(LS_KEY,$('#setKey').value.trim());save(LS_MODEL,$('#setModel').value);
+    var s=$('#setStatus');s.className='set-status ok';s.textContent='נשמר ✓';
+    setTimeout(closeSettings,700);
+  });
+  $('#setClear').addEventListener('click',function(){
+    save(LS_KEY,'');$('#setKey').value='';
+    var s=$('#setStatus');s.className='set-status ok';s.textContent='המפתח נמחק מהמכשיר.';
+  });
+  $('#setTest').addEventListener('click',async function(){
+    var s=$('#setStatus');s.className='set-status';s.textContent='בודק…';
+    var k=$('#setKey').value.trim();
+    if(!k){s.className='set-status bad';s.textContent='חסר מפתח.';return;}
+    try{
+      var t=await callGemini('בדיקה קצרה: כתוב "מחובר" ותו לא.',[],[],k,$('#setModel').value);
+      s.className='set-status ok';s.textContent='החיבור תקין ✓  ('+t.slice(0,40)+')';
+    }catch(e){s.className='set-status bad';s.textContent='שגיאה: '+e.message;}
+  });
+
+  // direct call to Gemini with the key held on this device
+  async function callGemini(question,ctx,history,key,model){
+    key=key||getKey();model=model||getModel();
+    if(!key)throw new Error('חסר מפתח API. פתחי הגדרות ⚙ והזיני מפתח.');
+    var sys='את/ה עוזר/ת תכנון פדגוגי לגננת בגן דתי בישראל ("גן עירית"). '+
+      'ברשותך קטעים מתוך בנק הפעילויות האישי של הגננת — פעילויות שהיא עצמה כתבה בדפי הקשר שלה. '+
+      'כללים: (1) בסס/י את התשובה קודם כל על הפעילויות שנשלחו בהקשר, וציין/י בסוגריים את המקור. '+
+      '(2) אם אין בהקשר משהו מתאים — אמור/י זאת והצע/י רעיון חדש, מסומן בבירור כרעיון חדש. '+
+      '(3) שמור/י על השפה, הערכים והאופי הדתי של הגן. (4) תשובות מעשיות, קצרות ומוכנות לשימוש. '+
+      '(5) מבנה יום הגן: מפגש בוקר ותפילה · קבוצות לפי תחום · פעילות בתנועה · ארוחה · מפגש תוכן · יצירה · מרכזי הגן · חצר · מפגש סיום. '+
+      '(6) ענה/י בעברית.';
+    var ctxText=ctx&&ctx.length?ctx.map(function(c,i){
+      return '--- פעילות '+(i+1)+' ---\nתחום: '+(c.domain||'')+'\nמיומנות: '+(c.skill||'')+
+             '\nכותרת: '+(c.title||'')+'\nמקור: '+(c.source||'')+'\nתוכן: '+(c.text||'');
+    }).join('\n\n'):'(לא נמצאו פעילויות מתאימות בבנק)';
+    var contents=[];
+    (history||[]).forEach(function(h){
+      if(h&&h.text)contents.push({role:h.role==='model'?'model':'user',parts:[{text:String(h.text).slice(0,2000)}]});
+    });
+    contents.push({role:'user',parts:[{text:'פעילויות רלוונטיות מהבנק שלי:\n\n'+ctxText+'\n\n----\nהשאלה שלי: '+question}]});
+    var url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+
+            ':generateContent?key='+encodeURIComponent(key);
+    var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents,systemInstruction:{parts:[{text:sys}]},
+        generationConfig:{temperature:0.7,maxOutputTokens:2048}})});
+    var data=await r.json();
+    if(!r.ok){throw new Error((data&&data.error&&data.error.message)||('שגיאה '+r.status));}
+    var c=data&&data.candidates&&data.candidates[0];
+    var text=c&&c.content&&c.content.parts?c.content.parts.map(function(p){return p.text||'';}).join('').trim():'';
+    if(!text)throw new Error('לא התקבלה תשובה מהמודל.');
+    return text;
+  }
+
+  // ================= VOICE INPUT =================
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  function wireMic(btnSel,inputSel,onDone){
+    var btn=$(btnSel);if(!btn)return;
+    if(!SR){btn.hidden=true;return;}
+    var rec=null,active=false;
+    btn.addEventListener('click',function(){
+      if(active&&rec){rec.stop();return;}
+      rec=new SR();rec.lang='he-IL';rec.interimResults=true;rec.continuous=false;
+      var finalTxt='';
+      rec.onstart=function(){active=true;btn.classList.add('rec');btn.title='מקליט… לחצי לעצירה';};
+      rec.onresult=function(e){
+        var interim='';
+        for(var i=e.resultIndex;i<e.results.length;i++){
+          var t=e.results[i][0].transcript;
+          if(e.results[i].isFinal)finalTxt+=t;else interim+=t;
+        }
+        $(inputSel).value=(finalTxt+interim).trim();
+      };
+      rec.onerror=function(ev){
+        active=false;btn.classList.remove('rec');
+        if(ev.error==='not-allowed')toast('אין הרשאת מיקרופון. אשרי גישה בדפדפן.');
+        else toast('לא הצלחתי להקליט ('+ev.error+').');
+      };
+      rec.onend=function(){
+        active=false;btn.classList.remove('rec');btn.title='דיבור במקום כתיבה';
+        if(finalTxt.trim()&&onDone)onDone(finalTxt.trim());
+      };
+      try{rec.start();}catch(e){toast('לא ניתן להפעיל הקלטה.');}
+    });
+  }
+  function toast(msg){
+    var t=$('#toast');t.textContent=msg;t.hidden=false;
+    clearTimeout(t._h);t._h=setTimeout(function(){t.hidden=true;},2600);
+  }
+
   // ================= CHAT (grounded in the bank, answered by Gemini) =================
-  var LS_PW='ganirit_pw_v1';
   var chatHistory=[];
   $('#goChat').addEventListener('click',function(){showView('chat');$('#chatInput').focus();});
   $('#chatBack').addEventListener('click',function(){showView('home');});
@@ -1140,52 +1420,36 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     var m=el('div','msg '+cls);m.textContent=text;
     $('#chatLog').appendChild(m);m.scrollIntoView({behavior:'smooth',block:'nearest'});return m;
   }
-  function askPassword(){
-    var pw=prompt('סיסמת הגישה לשיחה (נשמרת במכשיר הזה):');
-    if(pw){save(LS_PW,pw);}
-    return pw;
-  }
   async function sendChat(){
     var input=$('#chatInput');
     var q=input.value.trim();
     if(!q)return;
+    if(!getKey()){
+      addMsg('err','כדי לשוחח צריך מפתח Gemini. פתחי הגדרות ⚙ למעלה והזיני מפתח (נשמר רק במכשיר שלך).');
+      openSettings();return;
+    }
     input.value='';
     addMsg('me',q);
     var ctx=retrieve(q,12);
     var thinking=addMsg('bot','');
     thinking.innerHTML='<span class="typing"><i></i><i></i><i></i></span>';
-    var pw=load(LS_PW)||'';
     try{
-      var r=await fetch('/api/chat',{method:'POST',
-        headers:{'Content-Type':'application/json','x-app-password':pw},
-        body:JSON.stringify({question:q,context:ctx,history:chatHistory})});
-      var data=await r.json();
-      if(r.status===401){
-        thinking.remove();
-        var np=askPassword();
-        if(np){addMsg('bot','נסי לשלוח שוב.');}
-        else{addMsg('err','נדרשת סיסמת גישה.');}
-        return;
-      }
-      if(!r.ok||data.error){
-        thinking.className='msg err';thinking.textContent=data.error||'שגיאה בקבלת תשובה.';
-        return;
-      }
-      thinking.className='msg bot';thinking.textContent=data.text;
-      var tag=el('span','src-tag','מבוסס על '+ctx.length+' פעילויות מהבנק שלך');
-      thinking.appendChild(tag);
+      var text=await callGemini(q,ctx,chatHistory);
+      thinking.className='msg bot';thinking.textContent=text;
+      thinking.appendChild(el('span','src-tag','מבוסס על '+ctx.length+' פעילויות מהבנק שלך'));
       chatHistory.push({role:'user',text:q});
-      chatHistory.push({role:'model',text:data.text});
+      chatHistory.push({role:'model',text:text});
       if(chatHistory.length>8)chatHistory=chatHistory.slice(-8);
     }catch(e){
-      thinking.className='msg err';
-      thinking.textContent='לא הצלחתי להתחבר. אם האפליקציה במצב לא־מקוון, השיחה דורשת אינטרנט.';
+      thinking.className='msg err';thinking.textContent=e.message||'שגיאה בקבלת תשובה.';
     }
   }
   $('#chatSend').addEventListener('click',sendChat);
   $('#chatInput').addEventListener('keydown',function(e){
     if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
-  $('#chatHint').textContent='טיפ: אפשר לשאול גם "בני לי סדר יום ליום שלישי בנושא חנוכה". Enter לשליחה.';
+  $('#chatHint').textContent='טיפ: אפשר לשאול גם "בני לי סדר יום ליום שלישי בנושא חנוכה". Enter לשליחה · 🎤 לדיבור.';
+  wireMic('#chatMic','#chatInput');
+  wireMic('#homeMic','#homeQ',function(txt){gotoBank({q:txt});});
 
   // ---------- init ----------
   buildFilters();render();renderCatalog();fillWizard();buildHome();
