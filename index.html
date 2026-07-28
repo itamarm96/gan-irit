@@ -60,6 +60,10 @@
           <span class="ba-ic">💡</span>
           <span class="ba-txt"><b>רעיון לפעילות</b><small>הצעה מהירה מתוך הבנק</small></span>
         </button>
+        <button class="big-action" id="goChat">
+          <span class="ba-ic">💬</span>
+          <span class="ba-txt"><b>שיחה חופשית</b><small>שאלי בשפה חופשית — עונה מתוך הבנק שלך</small></span>
+        </button>
       </div>
     </section>
 
@@ -196,6 +200,21 @@
     </div>
     <div id="favCards" class="cards"></div>
     <div id="favEmpty" class="empty" hidden><p>עוד לא סימנת פעילויות. לחצי על הכוכב בפינת כל כרטיס כדי לשמור לכאן.</p></div>
+  </main>
+
+  <!-- ============ CHAT ============ -->
+  <main class="view" id="view-chat">
+    <button class="back-link" id="chatBack">→ חזרה לבית</button>
+    <div class="section-intro">
+      <h2>שיחה חופשית</h2>
+      <p>שאלי מה שבא לך — למשל "תני לי פעילות מתמטית לט״ו בשבט שמשלבת תנועה" או "מה אפשר לעשות עם ילדים שמתקשים בקשב". התשובה מבוססת על הבנק שלך, עם ציון המקור.</p>
+    </div>
+    <div id="chatLog" class="chat-log"></div>
+    <div class="chat-box">
+      <textarea id="chatInput" rows="2" placeholder="כתבי כאן…"></textarea>
+      <button class="btn-primary" id="chatSend">שליחה</button>
+    </div>
+    <div class="chat-hint" id="chatHint"></div>
   </main>
 
   <!-- ============ LEGACY PLAN VIEW (kept for the claude.ai project instructions) ============ -->
@@ -479,6 +498,25 @@ select,input{font-family:inherit;font-size:15px;color:var(--ink)}
 .slot-pick .sp-more{background:none;border:none;color:var(--primary-ink);font-weight:600;font-size:12.5px;padding:2px 0 0}
 .slot-empty{font-size:12.5px;color:var(--ink-soft);font-style:italic}
 .pill.lvl{font-size:12.5px}
+/* ---------- chat ---------- */
+.chat-log{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;min-height:60px}
+.msg{max-width:min(680px,92%);padding:12px 15px;border-radius:14px;font-size:14.6px;line-height:1.65;
+  white-space:pre-wrap;box-shadow:var(--shadow)}
+.msg.me{align-self:flex-start;background:var(--primary);color:#fff;border-bottom-left-radius:5px}
+.msg.bot{align-self:flex-end;background:var(--panel);border:1px solid var(--line);border-bottom-right-radius:5px}
+.msg.err{align-self:flex-end;background:var(--rose-soft);border:1px solid var(--rose);color:var(--rose)}
+.msg .src-tag{display:block;margin-top:6px;font-size:11.5px;color:var(--ink-soft)}
+.typing{display:inline-flex;gap:4px;align-items:center}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--ink-soft);animation:bl 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.typing i{animation:none}}
+.chat-box{display:flex;gap:9px;align-items:flex-end;background:var(--panel);border:1px solid var(--line-strong);
+  border-radius:13px;padding:9px;box-shadow:var(--shadow)}
+.chat-box textarea{flex:1;min-width:0;border:none;background:none;outline:none;resize:none;font-size:15.5px;
+  padding:7px 6px;color:var(--ink);font-family:inherit;line-height:1.5}
+.chat-box .btn-primary{flex:0 0 auto}
+.chat-hint{font-size:12.5px;color:var(--ink-soft);margin-top:9px;text-align:center}
 /* toast */
 .toast{position:fixed;bottom:24px;inset-inline-start:50%;transform:translateX(50%);background:var(--primary);
   color:#fff;padding:11px 20px;border-radius:12px;font-size:14px;box-shadow:var(--shadow);z-index:60}
@@ -1070,6 +1108,84 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     $$('#wzSkills .pill').forEach(function(b){b.classList.remove('on');});
     $('#planResult').innerHTML='';});
   $('#wzPrint').addEventListener('click',function(){window.print();});
+
+  // ================= CHAT (grounded in the bank, answered by Gemini) =================
+  var LS_PW='ganirit_pw_v1';
+  var chatHistory=[];
+  $('#goChat').addEventListener('click',function(){showView('chat');$('#chatInput').focus();});
+  $('#chatBack').addEventListener('click',function(){showView('home');});
+
+  // pull the most relevant activities for a free-text question
+  function retrieve(q,n){
+    var toks=q.toLowerCase().split(/[\s,.?!"'׳״()־-]+/).filter(function(t){return t.length>=2;});
+    var scored=ACT.map(function(a){
+      var hay=((a.title||'')+' '+(a.text||'')+' '+(a.skill||'')+' '+(a.holiday||'')+' '+
+               (a.main_theme||'')+' '+((a.topics||[]).join(' '))+' '+(DOM_LABEL[a.domain]||a.domain||'')).toLowerCase();
+      var s=0;
+      toks.forEach(function(t){
+        if(hay.indexOf(t)>-1)s+=1;
+        if((a.holiday||'').toLowerCase().indexOf(t)>-1)s+=3;
+        if((a.skill||'').toLowerCase().indexOf(t)>-1)s+=2;
+        if((DOM_LABEL[a.domain]||'').toLowerCase().indexOf(t)>-1)s+=2;
+        if((a.title||'').toLowerCase().indexOf(t)>-1)s+=2;
+      });
+      return {a:a,s:s};
+    }).filter(function(x){return x.s>0;}).sort(function(x,y){return y.s-x.s;});
+    return scored.slice(0,n||12).map(function(x){
+      return {domain:DOM_LABEL[x.a.domain]||x.a.domain,skill:x.a.skill,title:x.a.title,
+              source:x.a.source_label,text:(x.a.text||'').slice(0,900)};
+    });
+  }
+  function addMsg(cls,text){
+    var m=el('div','msg '+cls);m.textContent=text;
+    $('#chatLog').appendChild(m);m.scrollIntoView({behavior:'smooth',block:'nearest'});return m;
+  }
+  function askPassword(){
+    var pw=prompt('סיסמת הגישה לשיחה (נשמרת במכשיר הזה):');
+    if(pw){save(LS_PW,pw);}
+    return pw;
+  }
+  async function sendChat(){
+    var input=$('#chatInput');
+    var q=input.value.trim();
+    if(!q)return;
+    input.value='';
+    addMsg('me',q);
+    var ctx=retrieve(q,12);
+    var thinking=addMsg('bot','');
+    thinking.innerHTML='<span class="typing"><i></i><i></i><i></i></span>';
+    var pw=load(LS_PW)||'';
+    try{
+      var r=await fetch('/api/chat',{method:'POST',
+        headers:{'Content-Type':'application/json','x-app-password':pw},
+        body:JSON.stringify({question:q,context:ctx,history:chatHistory})});
+      var data=await r.json();
+      if(r.status===401){
+        thinking.remove();
+        var np=askPassword();
+        if(np){addMsg('bot','נסי לשלוח שוב.');}
+        else{addMsg('err','נדרשת סיסמת גישה.');}
+        return;
+      }
+      if(!r.ok||data.error){
+        thinking.className='msg err';thinking.textContent=data.error||'שגיאה בקבלת תשובה.';
+        return;
+      }
+      thinking.className='msg bot';thinking.textContent=data.text;
+      var tag=el('span','src-tag','מבוסס על '+ctx.length+' פעילויות מהבנק שלך');
+      thinking.appendChild(tag);
+      chatHistory.push({role:'user',text:q});
+      chatHistory.push({role:'model',text:data.text});
+      if(chatHistory.length>8)chatHistory=chatHistory.slice(-8);
+    }catch(e){
+      thinking.className='msg err';
+      thinking.textContent='לא הצלחתי להתחבר. אם האפליקציה במצב לא־מקוון, השיחה דורשת אינטרנט.';
+    }
+  }
+  $('#chatSend').addEventListener('click',sendChat);
+  $('#chatInput').addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+  $('#chatHint').textContent='טיפ: אפשר לשאול גם "בני לי סדר יום ליום שלישי בנושא חנוכה". Enter לשליחה.';
 
   // ---------- init ----------
   buildFilters();render();renderCatalog();fillWizard();buildHome();
