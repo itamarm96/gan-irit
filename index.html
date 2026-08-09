@@ -134,6 +134,10 @@
       </div>
     </div>
 
+    <div class="view-toggle" id="planViewToggle" hidden>
+      <button class="pill on" id="viewCards">תצוגת כרטיסים</button>
+      <button class="pill" id="viewTable">תצוגת טבלה</button>
+    </div>
     <div id="planResult" class="plan-result"></div>
   </main>
 
@@ -179,6 +183,10 @@
         </div>
         <div id="chipsActive" class="chips-active"></div>
         <div id="cards" class="cards"></div>
+        <div id="catMatches" class="cat-matches" hidden>
+          <h3 class="cm-head">גם בחומרים של אביטל פריאל</h3>
+          <div id="catMatchCards" class="cards"></div>
+        </div>
         <div id="empty" class="empty" hidden>
           <p>לא נמצאו פעילויות שמתאימות לחיפוש.</p>
           <button class="btn-soft" id="emptyReset">איפוס הסינון</button>
@@ -213,6 +221,34 @@
     </div>
     <div id="favCards" class="cards"></div>
     <div id="favEmpty" class="empty" hidden><p>עוד לא סימנת פעילויות. לחצי על הכוכב בפינת כל כרטיס כדי לשמור לכאן.</p></div>
+  </main>
+
+  <!-- ============ ACTIVITY IDEA ============ -->
+  <main class="view" id="view-idea">
+    <button class="back-link" id="ideaBack">→ חזרה לבית</button>
+    <div class="section-intro">
+      <h2>רעיון לפעילות</h2>
+      <p>בוחרים נושא ומיומנות — ומקבלים הצעות מתוך הבנק. אפשר גם בלי לבחור כלום.</p>
+    </div>
+    <div class="wizard">
+      <div class="wz-grid">
+        <label>נושא / חג
+          <select id="idTopic"></select>
+        </label>
+        <label>מיומנות
+          <select id="idSkill"></select>
+        </label>
+        <label>כמה הצעות
+          <select id="idCount"><option>3</option><option selected>5</option><option>8</option></select>
+        </label>
+      </div>
+      <div class="wz-go">
+        <button class="btn-primary" id="idBuild">קבלת רעיונות</button>
+        <button class="btn-soft" id="idReset">איפוס</button>
+        <button class="btn-soft" id="idPrint">הדפסה</button>
+      </div>
+    </div>
+    <div id="ideaResult" class="plan-result"></div>
   </main>
 
   <!-- ============ CHAT ============ -->
@@ -554,6 +590,26 @@ select,input{font-family:inherit;font-size:15px;color:var(--ink)}
 .slot-pick .sp-more{background:none;border:none;color:var(--primary-ink);font-weight:600;font-size:12.5px;padding:2px 0 0}
 .slot-empty{font-size:12.5px;color:var(--ink-soft);font-style:italic}
 .pill.lvl{font-size:12.5px}
+/* ---------- avital matches inside search results ---------- */
+.cat-matches{margin-top:26px;padding-top:18px;border-top:2px dashed var(--line-strong)}
+.cm-head{font-size:15.5px;color:var(--accent);margin-bottom:12px;font-family:var(--sans);font-weight:700}
+/* ---------- plan table views ---------- */
+.view-toggle{display:flex;gap:7px;margin:14px 0 6px;flex-wrap:wrap}
+.tbl-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin-top:4px}
+table.plan-tbl{border-collapse:collapse;width:100%;min-width:520px}
+table.plan-tbl th,table.plan-tbl td{border:1px solid var(--line);padding:10px 12px;vertical-align:top;text-align:right}
+table.plan-tbl thead th{background:var(--panel-2);font-size:13.5px;color:var(--primary-ink);font-weight:700;
+  position:sticky;top:0}
+table.plan-tbl td.t-slot{width:150px;font-weight:700;color:var(--ink);font-size:13.5px;background:var(--panel-2)}
+table.plan-tbl td.t-slot small{display:block;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;
+  margin-top:2px}
+table.plan-tbl td .td-title{font-weight:700;font-size:13.8px;color:var(--primary-ink);display:block;margin-bottom:3px}
+table.plan-tbl td .td-text{font-size:13px;line-height:1.55;color:var(--ink)}
+table.plan-tbl td .td-src{display:block;font-size:11.3px;color:var(--ink-soft);margin-top:5px}
+table.plan-tbl.by-day td{min-width:230px}
+table.plan-tbl .part-lbl{font-size:11.5px;font-weight:700;color:var(--accent);display:block;margin:8px 0 3px}
+table.plan-tbl .part-lbl:first-child{margin-top:0}
 /* ---------- modal / settings ---------- */
 .modal-backdrop{position:fixed;inset:0;background:rgba(20,26,22,.5);z-index:60;border:none}
 .modal{position:fixed;z-index:61;top:50%;left:50%;transform:translate(-50%,-50%);width:min(94vw,520px);
@@ -834,6 +890,22 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     $('#empty').hidden=list.length>0;
     $('#loadMore').hidden=list.length<=state.limit;
     $('#favTabCount').textContent=Object.keys(favs).length||'';
+    renderCatMatches();
+  }
+  // when searching, surface matching Avital booklets alongside the bank
+  function renderCatMatches(){
+    var box=$('#catMatches'),cards=$('#catMatchCards');
+    if(!CAT.length||!state.q){box.hidden=true;return;}
+    var q=state.q.toLowerCase();
+    var toks=q.split(/\s+/).filter(Boolean);
+    var hits=CAT.filter(function(m){
+      var hay=((m.title||'')+' '+(m.description||'')+' '+((m.topics||[]).join(' '))+' '+(m.type||'')).toLowerCase();
+      return toks.every(function(t){return hay.indexOf(t)>-1;});
+    }).slice(0,6);
+    if(!hits.length){box.hidden=true;return;}
+    cards.innerHTML='';
+    hits.forEach(function(m){cards.appendChild(catCard(m));});
+    box.hidden=false;
   }
   function actKey(a){return (a.id||(a.source_file+a.title));}
   function cardEl(a){
@@ -932,6 +1004,20 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     sortList(list);list.forEach(function(a){box.appendChild(cardEl(a));});}
 
   // ---------- catalog view ----------
+  function catCard(x){
+    var c=el('div','card catcard');
+    var top=el('div','card-top');
+    var b=el('span','badge');b.style.background=tint('#8A6E2A');b.style.color='#8A6E2A';
+    b.textContent=x.type||((x.topics&&x.topics[0])||'חומר');
+    top.appendChild(b);c.appendChild(top);
+    c.appendChild(el('h3','card-title',esc(x.title||'')));
+    if(x.description)c.appendChild(el('div','body',esc(x.description)));
+    var meta=el('div','card-meta');
+    (x.topics||[]).slice(0,5).forEach(function(t){meta.appendChild(el('span','tag',esc(t)));});
+    c.appendChild(meta);
+    if(x.file)c.appendChild(el('div','open-file','📄 '+esc(x.file)));
+    return c;
+  }
   var catState={q:'',tag:''};
   function catTags(){var m={};CAT.forEach(function(x){(x.topics||[]).forEach(function(t){m[t]=(m[t]||0)+1;});});
     return Object.keys(m).sort(function(a,b){return m[b]-m[a];});}
@@ -952,20 +1038,7 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
       if(catState.tag && (x.topics||[]).indexOf(catState.tag)===-1)return false;
       if(q){var hay=((x.title||'')+' '+(x.description||'')+' '+(x.topics||[]).join(' ')+' '+(x.file||'')).toLowerCase();
         return hay.indexOf(q)>-1;}return true;});
-    list.forEach(function(x){
-      var c=el('div','card catcard');
-      var top=el('div','card-top');
-      var b=el('span','badge');b.style.background=tint('#8A6E2A');b.style.color='#8A6E2A';
-      b.textContent=x.type||((x.topics&&x.topics[0])||'חומר');
-      top.appendChild(b);c.appendChild(top);
-      c.appendChild(el('h3','card-title',esc(x.title||'')));
-      if(x.description)c.appendChild(el('div','body',esc(x.description)));
-      var meta=el('div','card-meta');
-      (x.topics||[]).slice(0,5).forEach(function(t){meta.appendChild(el('span','tag',esc(t)));});
-      c.appendChild(meta);
-      if(x.file)c.appendChild(el('div','open-file','📄 '+esc(x.file)));
-      box.appendChild(c);
-    });
+    list.forEach(function(x){box.appendChild(catCard(x));});
     $('#catEmpty').hidden=list.length>0;
   }
   var qct;$('#qcat')&&$('#qcat').addEventListener('input',function(e){catState.q=e.target.value.trim();
@@ -1047,8 +1120,9 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
   $('#homeGo').addEventListener('click',function(){var v=$('#homeQ').value.trim();if(v)gotoBank({q:v});});
   $('#homeQ').addEventListener('keydown',function(e){if(e.key==='Enter'){var v=e.target.value.trim();if(v)gotoBank({q:v});}});
   $('#goPlan').addEventListener('click',function(){showView('planner');});
-  $('#goIdea').addEventListener('click',function(){showView('planner');quickIdea();});
+  $('#goIdea').addEventListener('click',function(){showView('idea');});
   $('#planBack').addEventListener('click',function(){showView('home');});
+  $('#ideaBack').addEventListener('click',function(){showView('home');});
 
   // ================= PLANNER =================
   function fillWizard(){
@@ -1124,6 +1198,11 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
   }
   function pickCard(a){
     if(!a)return el('div','slot-empty','אין עדיין פעילות מתאימה בבנק למשבצת הזו.');
+    if(a.freeText){
+      var f=el('div','slot-pick');
+      f.innerHTML='<span class="sp-title">'+esc(a.title)+'</span><div class="sp-text">'+esc(a.freeText)+'</div>';
+      return f;
+    }
     var w=el('div','slot-pick');
     w.innerHTML='<span class="sp-title">'+esc(a.title||'')+'</span>'+
       '<div class="sp-text">'+esc(a.text||'')+'</div>'+
@@ -1136,68 +1215,189 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     w.appendChild(mb);
     return w;
   }
+  // ---- table renderers (day plan: slot | description · topic plan: one column per day) ----
+  var lastPlan=null, planView='cards';
+  function tdActivity(a,partLabel){
+    var wrap=document.createDocumentFragment();
+    if(partLabel)wrap.appendChild(el('span','part-lbl',esc(partLabel)));
+    if(!a){wrap.appendChild(el('span','slot-empty','—'));return wrap;}
+    if(a.freeText){
+      wrap.appendChild(el('span','td-title',esc(a.title)));
+      wrap.appendChild(el('span','td-text',esc(a.freeText)));
+      return wrap;
+    }
+    wrap.appendChild(el('span','td-title',esc(a.title||'')));
+    wrap.appendChild(el('span','td-text',esc(a.text||'')));
+    wrap.appendChild(el('span','td-src',esc((DOM_LABEL[a.domain]||a.domain||'')+' · '+(a.source_label||''))));
+    return wrap;
+  }
+  function renderDayTable(p){
+    var out=$('#planResult');out.innerHTML='';
+    var head=el('div','pr-head');
+    head.innerHTML='<h3>סדר יום · יום '+esc(p.dayName)+(p.topic?(' · '+esc(p.topic)):'')+'</h3>'+
+      '<div class="pr-meta">'+esc(p.metaText)+'</div>';
+    out.appendChild(head);
+    var wrap=el('div','tbl-wrap');
+    var t=document.createElement('table');t.className='plan-tbl';
+    t.innerHTML='<thead><tr><th style="width:150px">חלק ביום</th><th>תיאור הפעילות</th></tr></thead>';
+    var tb=document.createElement('tbody');
+    p.rows.forEach(function(r){
+      var tr=document.createElement('tr');
+      var td1=document.createElement('td');td1.className='t-slot';
+      td1.innerHTML=esc(r.name)+'<small>'+esc(r.time)+'</small>';
+      var td2=document.createElement('td');
+      if(r.detail)td2.appendChild(el('div','slot-detail',esc(r.detail)));
+      if(r.items&&r.items.length){
+        r.items.forEach(function(it){td2.appendChild(tdActivity(it.a,it.label));});
+      } else if(!r.detail){ td2.appendChild(el('span','slot-empty','—')); }
+      tr.appendChild(td1);tr.appendChild(td2);tb.appendChild(tr);
+    });
+    t.appendChild(tb);wrap.appendChild(t);out.appendChild(wrap);
+  }
+  function renderTopicTable(p){
+    var out=$('#planResult');out.innerHTML='';
+    var head=el('div','pr-head');
+    head.innerHTML='<h3>תכנון נושא'+(p.topic?(' · '+esc(p.topic)):'')+' · '+p.days.length+' ימים</h3>'+
+      '<div class="pr-meta">'+esc(p.metaText)+'</div>';
+    out.appendChild(head);
+    var wrap=el('div','tbl-wrap');
+    var t=document.createElement('table');t.className='plan-tbl by-day';
+    var thead='<thead><tr><th style="width:135px">חלק ביום</th>';
+    p.days.forEach(function(d){thead+='<th>יום '+d.n+'</th>';});
+    thead+='</tr></thead>';
+    t.innerHTML=thead;
+    var tb=document.createElement('tbody');
+    var partNames=['מפגש נושא','יצירה מובנית','יצירה חופשית','פעילות מעבר תנועתית','קבוצות לפי מיומנות'];
+    partNames.forEach(function(pn,idx){
+      var tr=document.createElement('tr');
+      var td1=document.createElement('td');td1.className='t-slot';td1.textContent=pn;
+      tr.appendChild(td1);
+      p.days.forEach(function(d){
+        var td=document.createElement('td');
+        var cell=d.parts[idx];
+        if(!cell||!cell.length){td.appendChild(el('span','slot-empty','—'));}
+        else{cell.forEach(function(it){td.appendChild(tdActivity(it.a,it.label));});}
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);wrap.appendChild(t);out.appendChild(wrap);
+  }
+  function renderPlan(){
+    if(!lastPlan)return;
+    $('#planViewToggle').hidden=false;
+    $('#viewCards').classList.toggle('on',planView==='cards');
+    $('#viewTable').classList.toggle('on',planView==='table');
+    if(planView==='table'){
+      if(lastPlan.kind==='day')renderDayTable(lastPlan);else renderTopicTable(lastPlan);
+    } else {
+      if(lastPlan.kind==='day')renderDayCards(lastPlan);else renderTopicCards(lastPlan);
+    }
+  }
+  $('#viewCards').addEventListener('click',function(){planView='cards';renderPlan();});
+  $('#viewTable').addEventListener('click',function(){planView='table';renderPlan();});
+
   function buildDayPlan(){
     if(!SCHED){$('#planResult').innerHTML='<div class="slot-empty">לא נטען מבנה סדר יום.</div>';return;}
     var dayName=$('#wzDay').value;
     var opts={topic:$('#wzTopic').value,period:$('#wzPeriod').value,skills:wizSelectedSkills()};
     var nGroups=parseInt($('#wzGroups').value,10)||2;
     var day=(SCHED.days||[]).filter(function(d){return d.day===dayName;})[0]||{};
-    var used={},out=$('#planResult');out.innerHTML='';
-    var head=el('div','pr-head');
-    head.innerHTML='<h3>סדר יום · יום '+esc(dayName)+(opts.topic?' · '+esc(opts.topic):'')+'</h3>'+
-      '<div class="pr-meta">'+(day.focus?('דגש: '+esc(day.focus)+' · '):'')+
-      (day.staff?('צוות: '+esc(day.staff.join(', '))):'')+(opts.period?(' · '+esc(opts.period)):'')+'</div>';
-    out.appendChild(head);
-
+    var used={};
+    var rows=[];
     (SCHED.fixed||[]).forEach(function(slot){
-      var row=el('div','slot');
-      var body=el('div','slot-body');
       var nameTxt=slot.slot;
       if(slot.kind==='meeting'&&day.meeting)nameTxt+=' — '+day.meeting;
       if(slot.kind==='movement'&&day.movement)nameTxt+=' — '+day.movement;
       if(slot.kind==='art'&&day.art)nameTxt+=' — '+day.art;
-      body.appendChild(el('div','slot-name',esc(nameTxt)));
-      if(slot.detail)body.appendChild(el('div','slot-detail',esc(slot.detail)));
+      var row={name:nameTxt,time:slot.time,detail:slot.detail||'',items:[]};
       if(slot.kind==='groups'){
         var groups=(day.groups||[]).slice(0,nGroups);
         if(!groups.length){
-          for(var i=0;i<nGroups;i++){body.appendChild(pickCard(pickFor(null,opts,used)));}
+          for(var i=0;i<nGroups;i++)row.items.push({a:pickFor(null,opts,used),label:null});
         } else {
           groups.forEach(function(g){
-            var lbl=el('div','slot-detail','▪ '+esc(g.name)+(g.time?(' · '+esc(g.time)):''));
-            body.appendChild(lbl);
-            if(g.detail)body.appendChild(el('div','slot-detail',esc(g.detail)));
-            body.appendChild(pickCard(pickFor(g.domain?[g.domain]:null,opts,used,g.skill)));
+            row.items.push({a:pickFor(g.domain?[g.domain]:null,opts,used,g.skill),
+                            label:g.name+(g.time?(' · '+g.time):'')});
           });
         }
       } else if((slot.fillWith||[]).length){
-        body.appendChild(pickCard(pickFor(slot.fillWith,opts,used,slot.skillHint)));
+        row.items.push({a:pickFor(slot.fillWith,opts,used,slot.skillHint),label:null});
       }
-      // extra groups that sit outside the main slot (e.g. קבוצת סיפור at 12:15)
-      row.appendChild(el('div','slot-time',esc(slot.time)));
-      row.appendChild(body);
-      out.appendChild(row);
+      rows.push(row);
     });
-    if(day.extra){
-      var ex=el('div','slot');
-      ex.appendChild(el('div','slot-time','נוסף'));
-      var eb=el('div','slot-body');eb.appendChild(el('div','slot-detail',esc(day.extra)));
-      ex.appendChild(eb);out.appendChild(ex);
-    }
-    out.scrollIntoView({behavior:'smooth',block:'nearest'});
+    if(day.extra)rows.push({name:'נוסף',time:'',detail:day.extra,items:[]});
+    lastPlan={kind:'day',dayName:dayName,topic:opts.topic,rows:rows,
+      metaText:(day.focus?('דגש: '+day.focus+' · '):'')+(day.staff?('צוות: '+day.staff.join(', ')):'')+
+               (opts.period?(' · '+opts.period):'')};
+    renderPlan();
+    $('#planResult').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
-  function quickIdea(){
-    $('#planTitle').textContent='רעיון לפעילות';
-    var opts={topic:$('#wzTopic').value,period:$('#wzPeriod').value,skills:wizSelectedSkills()};
-    var used={},out=$('#planResult');out.innerHTML='';
-    var head=el('div','pr-head');head.innerHTML='<h3>שלוש הצעות מהבנק</h3><div class="pr-meta">לחצי "בנה לי סדר יום" ליום שלם, או רענני לקבלת הצעות אחרות.</div>';
+  function renderDayCards(p){
+    var out=$('#planResult');out.innerHTML='';
+    var head=el('div','pr-head');
+    head.innerHTML='<h3>סדר יום · יום '+esc(p.dayName)+(p.topic?(' · '+esc(p.topic)):'')+'</h3>'+
+      '<div class="pr-meta">'+esc(p.metaText)+'</div>';
     out.appendChild(head);
-    for(var i=0;i<3;i++){
-      var a=pickFor(null,opts,used);
+    p.rows.forEach(function(r){
+      var row=el('div','slot');
+      row.appendChild(el('div','slot-time',esc(r.time)));
+      var body=el('div','slot-body');
+      body.appendChild(el('div','slot-name',esc(r.name)));
+      if(r.detail)body.appendChild(el('div','slot-detail',esc(r.detail)));
+      (r.items||[]).forEach(function(it){
+        if(it.label)body.appendChild(el('div','slot-detail','▪ '+esc(it.label)));
+        body.appendChild(pickCard(it.a));
+      });
+      row.appendChild(body);out.appendChild(row);
+    });
+  }
+  // ---- standalone "activity idea": topic + skill only ----
+  function fillIdea(){
+    var tSel=$('#idTopic');tSel.innerHTML='';
+    var n=el('option');n.value='';n.textContent='— כל נושא —';tSel.appendChild(n);
+    var hc=uniqCounts('holiday');
+    HOLIDAYS.forEach(function(h){if(hc[h]){var o=el('option');o.value=h;o.textContent=h+' ('+hc[h]+')';tSel.appendChild(o);}});
+    ((TAX.topics&&TAX.topics.themes)||[]).forEach(function(t){var o=el('option');o.value=t;o.textContent=t;tSel.appendChild(o);});
+    var sSel=$('#idSkill');sSel.innerHTML='';
+    var n2=el('option');n2.value='';n2.textContent='— כל מיומנות —';sSel.appendChild(n2);
+    var sc={};ACT.forEach(function(a){if(a.skill)sc[a.skill]=(sc[a.skill]||0)+1;});
+    var parents={};
+    Object.keys(sc).forEach(function(s){
+      var i=s.indexOf(':');var p=i>-1?s.slice(0,i).trim():'כללי';
+      (parents[p]=parents[p]||[]).push(s);
+    });
+    Object.keys(parents).sort().forEach(function(p){
+      var grp=document.createElement('optgroup');grp.label=p;
+      parents[p].sort(function(a,b){return sc[b]-sc[a];}).forEach(function(s){
+        var o=el('option');o.value=s;
+        o.textContent=(s.indexOf(':')>-1?s.slice(s.indexOf(':')+1).trim():s)+' ('+sc[s]+')';
+        grp.appendChild(o);});
+      sSel.appendChild(grp);
+    });
+  }
+  function buildIdeas(){
+    var topic=$('#idTopic').value, skill=$('#idSkill').value;
+    var count=parseInt($('#idCount').value,10)||5;
+    var opts={topic:topic,period:'',skills:skill?[skill]:[]};
+    var used={},out=$('#ideaResult');out.innerHTML='';
+    var head=el('div','pr-head');
+    head.innerHTML='<h3>'+count+' הצעות מהבנק</h3><div class="pr-meta">'+
+      (topic?('נושא: '+esc(topic)):'כל נושא')+' · '+
+      (skill?('מיומנות: '+esc(skill.indexOf(':')>-1?skill.slice(skill.indexOf(':')+1).trim():skill)):'כל מיומנות')+
+      ' · אפשר ללחוץ שוב לקבלת הצעות אחרות</div>';
+    out.appendChild(head);
+    for(var i=0;i<count;i++){
+      var a=pickFor(null,opts,used,skill||null);
+      if(!a)break;
       var row=el('div','slot');row.appendChild(el('div','slot-time','הצעה'));
       var b=el('div','slot-body');b.appendChild(pickCard(a));row.appendChild(b);out.appendChild(row);
     }
   }
+  $('#idBuild').addEventListener('click',buildIdeas);
+  $('#idReset').addEventListener('click',function(){
+    $('#idTopic').value='';$('#idSkill').value='';$('#idCount').value='5';$('#ideaResult').innerHTML='';});
+  $('#idPrint').addEventListener('click',function(){window.print();});
   // ---- topic plan across several teaching days ----
   var planMode='day';
   function setMode(m){
@@ -1210,7 +1410,7 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     $('#planIntro').textContent=(m==='day')
       ? 'אפשר לענות על השאלות כדי למקד, ואפשר פשוט ללחוץ "בנה לי" ולקבל הצעה מיד.'
       : 'בוחרים נושא וכמה ימים ללמד אותו — ומקבלים לכל יום: מפגש נושא, יצירה מובנית וחופשית, פעילות מעבר תנועתית, וקבוצות מיומנות שקשורות לנושא.';
-    $('#planResult').innerHTML='';
+    lastPlan=null;$('#planResult').innerHTML='';$('#planViewToggle').hidden=true;
   }
   $('#modeDay').addEventListener('click',function(){setMode('day');});
   $('#modeTopic').addEventListener('click',function(){setMode('topic');});
@@ -1225,13 +1425,7 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
     var nDays=parseInt($('#wzDays').value,10)||3;
     var nGroups=parseInt($('#wzGroups').value,10)||2;
     var opts={topic:topic,period:$('#wzPeriod').value,skills:wizSelectedSkills()};
-    var used={},out=$('#planResult');out.innerHTML='';
-    var head=el('div','pr-head');
-    head.innerHTML='<h3>תכנון נושא'+(topic?(' · '+esc(topic)):'')+' · '+nDays+' ימים</h3>'+
-      '<div class="pr-meta">לכל יום: מפגש נושא · יצירה מובנית + חופשית · פעילות מעבר תנועתית · '+nGroups+' קבוצות מיומנות'+
-      (opts.period?(' · '+esc(opts.period)):'')+'</div>';
-    out.appendChild(head);
-
+    var used={};
     // skills to rotate through the groups — those the teacher chose, else the
     // ones that actually appear in this topic's activities
     var skillPool=opts.skills.slice();
@@ -1247,36 +1441,50 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
       skillPool=Object.keys(sc).sort(function(a,b){return sc[b]-sc[a];}).slice(0,8);
     }
 
+    var days=[];
     for(var d=1;d<=nDays;d++){
-      var blk=el('div','day-block');
-      blk.appendChild(el('h4','יום '+d));
-      blk.appendChild(el('div','db-sub',topic?('נושא: '+esc(topic)):'תכנון כללי'));
-      // 1) topic meeting
-      blk.appendChild(part('מפגש נושא',
-        pickCard(pickFor(['תוכן נלמד','גננת משלימה','פרשת שבוע'],opts,used))));
-      // 2) structured + free art
-      blk.appendChild(part('יצירה מובנית',
-        pickCard(pickFor(['תוכן נלמד'],opts,used,'יצירה ויצרנות'))));
-      var freeArt=el('div','slot-pick');
-      freeArt.innerHTML='<span class="sp-title">יצירה חופשית</span><div class="sp-text">'+
-        'שולחן פתוח בסדנת החומרים — חומרים מגוונים בנושא '+esc(topic||'הנלמד')+
-        ', הילדים מתכננים ובוחרים בעצמם במה להשתמש וכיצד לחבר.</div>';
-      blk.appendChild(part('יצירה חופשית',freeArt));
-      // 3) movement transition
-      blk.appendChild(part('פעילות מעבר תנועתית',
-        pickCard(pickFor(['מוטוריקה-גרפומוטוריה'],opts,used,'מוטוריקה גסה'))));
-      // 4) skill groups tied to the topic
-      var gWrap=el('div');
+      var parts=[];
+      parts.push([{a:pickFor(['תוכן נלמד','גננת משלימה','פרשת שבוע'],opts,used),label:null}]);
+      parts.push([{a:pickFor(['תוכן נלמד'],opts,used,'יצירה ויצרנות'),label:null}]);
+      parts.push([{a:{freeText:'שולחן פתוח בסדנת החומרים — חומרים מגוונים בנושא '+(topic||'הנלמד')+
+        ', הילדים מתכננים ובוחרים בעצמם במה להשתמש וכיצד לחבר.',title:'יצירה חופשית'},label:null}]);
+      parts.push([{a:pickFor(['מוטוריקה-גרפומוטוריה'],opts,used,'מוטוריקה גסה'),label:null}]);
+      var gItems=[];
       for(var g=0;g<nGroups;g++){
         var sk=skillPool.length?skillPool[(d-1+g)%skillPool.length]:null;
         var short=sk?(sk.indexOf(':')>-1?sk.slice(sk.indexOf(':')+1).trim():sk):'קבוצה';
-        gWrap.appendChild(el('div','slot-detail','▪ '+esc(short)));
-        gWrap.appendChild(pickCard(pickFor(null,{topic:opts.topic,period:opts.period,skills:sk?[sk]:[]},used,sk)));
+        gItems.push({a:pickFor(null,{topic:opts.topic,period:opts.period,skills:sk?[sk]:[]},used,sk),label:short});
       }
-      blk.appendChild(part('קבוצות לפי מיומנות',gWrap));
-      out.appendChild(blk);
+      parts.push(gItems);
+      days.push({n:d,parts:parts});
     }
-    out.scrollIntoView({behavior:'smooth',block:'nearest'});
+    lastPlan={kind:'topic',topic:topic,days:days,
+      metaText:'לכל יום: מפגש נושא · יצירה מובנית + חופשית · פעילות מעבר תנועתית · '+nGroups+
+               ' קבוצות מיומנות'+(opts.period?(' · '+opts.period):'')};
+    renderPlan();
+    $('#planResult').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  function renderTopicCards(p){
+    var out=$('#planResult');out.innerHTML='';
+    var head=el('div','pr-head');
+    head.innerHTML='<h3>תכנון נושא'+(p.topic?(' · '+esc(p.topic)):'')+' · '+p.days.length+' ימים</h3>'+
+      '<div class="pr-meta">'+esc(p.metaText)+'</div>';
+    out.appendChild(head);
+    var partNames=['מפגש נושא','יצירה מובנית','יצירה חופשית','פעילות מעבר תנועתית','קבוצות לפי מיומנות'];
+    p.days.forEach(function(d){
+      var blk=el('div','day-block');
+      blk.appendChild(el('h4','יום '+d.n));
+      blk.appendChild(el('div','db-sub',p.topic?('נושא: '+esc(p.topic)):'תכנון כללי'));
+      d.parts.forEach(function(items,idx){
+        var holder=el('div');
+        items.forEach(function(it){
+          if(it.label)holder.appendChild(el('div','slot-detail','▪ '+esc(it.label)));
+          holder.appendChild(pickCard(it.a));
+        });
+        blk.appendChild(part(partNames[idx],holder));
+      });
+      out.appendChild(blk);
+    });
   }
 
   $('#wzBuild').addEventListener('click',function(){
@@ -1286,7 +1494,7 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
   $('#wzReset').addEventListener('click',function(){
     $('#wzTopic').value='';$('#wzPeriod').value='';$('#wzGroups').value='2';
     $$('#wzSkills .pill').forEach(function(b){b.classList.remove('on');});
-    $('#planResult').innerHTML='';});
+    lastPlan=null;$('#planResult').innerHTML='';$('#planViewToggle').hidden=true;});
   $('#wzPrint').addEventListener('click',function(){window.print();});
 
   // ================= SETTINGS (bring-your-own Gemini key, stored on device) =================
@@ -1530,7 +1738,7 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
   wireMic('#homeMic','#homeQ',function(txt){gotoBank({q:txt});});
 
   // ---------- init ----------
-  buildFilters();render();renderCatalog();fillWizard();buildHome();
+  buildFilters();render();renderCatalog();fillWizard();fillIdea();buildHome();
   $('#brandSub').textContent = (DATA.meta.activities||ACT.length)+' פעילויות · '+(DATA.meta.sheets||0)+' דפי קשר';
 })();
 </script>
