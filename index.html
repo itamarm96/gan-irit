@@ -1348,7 +1348,9 @@ window.__BANK__ = {"activities":[{"id":"1-1","domain":"תוכן נלמד","skill
       var slotNotes=noticesForSlot(slot.kind);
       if(slotNotes.length)row.detail=(row.detail?row.detail+' · ':'')+'◆ '+slotNotes.join(' · ');
       if(slot.kind==='groups'){
-        var groups=(day.groups||[]).slice(0,nGroups);
+        // a day with groups defined in the schedule shows all of them;
+        // the "מספר קבוצות" selector only fills days that have none
+        var groups=(day.groups||[]);
         if(!groups.length){
           for(var i=0;i<nGroups;i++)row.items.push({a:pickFor(null,opts,used),label:null});
         } else {
